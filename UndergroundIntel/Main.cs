@@ -1,15 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 using CCL.GTAIV;
 
 using UndergroundIntel.Classes;
 using UndergroundIntel.Classes.Cutscenes;
+using UndergroundIntel.Classes.Json;
 
 using IVSDKDotNet;
+using IVSDKDotNet.Attributes;
 using IVSDKDotNet.Enums;
+using IVSDKDotNet.Hooking;
 using static IVSDKDotNet.Native.Natives;
 
 namespace UndergroundIntel
@@ -18,106 +23,8 @@ namespace UndergroundIntel
     {
 
         #region Variables
-        internal static Main Instance;
 
         // Lists
-        private readonly Dictionary<string, Island> zoneToIslandDict = new Dictionary<string, Island>()
-        {
-            // Alderney
-            { "WESDY", Island.Alderney },
-            { "LEFWO", Island.Alderney },
-            { "ALDCI", Island.Alderney },
-            { "BERCH", Island.Alderney },
-            { "NORMY", Island.Alderney },
-            { "ACTRR", Island.Alderney },
-            { "PORTU", Island.Alderney },
-            { "TUDOR", Island.Alderney },
-            { "ACTIP", Island.Alderney },
-            { "ALSCF", Island.Alderney },
-
-            // Algonquin
-            { "NORWO", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "EAHOL", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "NOHOL", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "VASIH", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "LANCA", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "MIDPE", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "MIDPA", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "MIDPW", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "PUGAT", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "HATGA", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "LANCE", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "STARJ", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "WESMI", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "TMEQU", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "THTRI", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "EASON", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "THPRES", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "FISSN", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "FISSO", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "LOWEA", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "LITAL", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "SUFFO", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "CASGC", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "CITH" , Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "CHITO", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "THXCH", Island.Algonquin_ColonyIsland_HappinessIsland },
-            { "CASGR", Island.Algonquin_ColonyIsland_HappinessIsland },
-
-            // Bohan
-            { "BOULE", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "NRTGA", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "LTBAY", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "FORSI", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "INSTI", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "STHBO", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "CHAPO", Island.Dukes_Broker_Bohan_ChargeIsland },
-
-            // Dukes
-            { "STEIN", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "MEADP", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "FRANI", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "WILLI", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "MEADH", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "EISLC", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "BOAB" , Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "CERHE", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "BEECW", Island.Dukes_Broker_Bohan_ChargeIsland },
-
-            // Broker
-            { "SCHOL", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "DOWTW", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "ROTTH", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "ESHOO", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "OUTL",  Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "SUTHS", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "HOBEH", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "FIREP", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "FIISL", Island.Dukes_Broker_Bohan_ChargeIsland },
-            { "BEGGA", Island.Dukes_Broker_Bohan_ChargeIsland },
-
-            // Happiness Island
-            { "HAPIN", Island.Algonquin_ColonyIsland_HappinessIsland },
-
-            // Charge Island
-            { "CHISL", Island.Dukes_Broker_Bohan_ChargeIsland },
-
-            // Colony Island
-            { "COISL", Island.Algonquin_ColonyIsland_HappinessIsland },
-
-            // Bridges, tunnels etc TODO
-            { "BRALG", Island.LibertyCity },
-            { "BRBRO", Island.LibertyCity },
-            { "BREBB", Island.LibertyCity },
-            { "BRDBB", Island.LibertyCity },
-            { "NOWOB", Island.LibertyCity },
-            { "HIBRG", Island.LibertyCity },
-            { "LEAPE", Island.LibertyCity },
-            { "BOTU", Island.LibertyCity },
-
-            // Liberty City
-            { "LIBERTY", Island.LibertyCity }
-        };
         private readonly List<int> ignoredPickupIndexes = new List<int>()
         {
             28
@@ -141,23 +48,38 @@ namespace UndergroundIntel
             3728725503,
         };
         private List<int> pickupsWithCustomTempBlip;
-        private List<uint> allowedRooms;
 
 #if DEBUG
-        public bool ShowModDebug;
-        public bool ShowPickupDebug;
+        [Separator("Debugging stuff")]
+        public bool ShowModDebugOverlay;
+        public bool ShowPickupDebugOverlay;
+        public float ShowPickupDebugStuffAtDistance = 50f;
         public bool HidePigeonPickups;
         public bool HideInvalidPickups;
-        public float ShowPickupDebugStuffAtDistance = 50f;
+        public bool DisableAddingTempBlipsCode;
+        public bool DisableTempBlipRemovalChecks;
 #endif
 
-        // Pickup stuff
-        public float ShowPickupsInRange = 500000000f;
+        // UI
+#if DEBUG
+        [Separator]
+#endif
+        public bool EditorOpened;
+        private string promptKey, promptValue;
 
-        // Bouncer stuff
-        private int currentBouncerHandle;
-        private NativeBlip currentBouncerBlip;
+        // Pickup stuff
+        private IVPickup[] pickups;
+
+        // Dealer stuff
+        private DealerSpot currentDealerSpot;
         private bool noMessageSound;
+
+        [HelpMarker("Visualizes dealer positions, ranges and states. Helpful for debugging.")]
+#if DEBUG
+        public bool VisualizeDealerStuff = true;
+#else
+        public bool VisualizeDealerStuff = false;
+#endif
 
         // Player stuff
         private int playerPedHandle;
@@ -166,43 +88,99 @@ namespace UndergroundIntel
 
         // Other
         private bool isUsingController;
-        private bool forcePickupsToShow;
+
+        #endregion
+
+        #region Hooks
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate bool CPickups_readSave_Delegate();
+        private CPickups_readSave_Delegate originalCPickupsReadSaveFunc;
+        private CPickups_readSave_Delegate hookedCPickupsReadSaveFunc;
+        private bool HookedCPickupsReadSaveFunc()
+        {
+            // Calls the original function of the game which will read all stored pickups from the save file
+            bool result = originalCPickupsReadSaveFunc();
+
+            Logging.LogDebug("HookedCPickupsReadSaveFunc called. Original func result: {0}", result);
+
+            // Resets all blips from the read pickups
+            IVPickup[] arr = IVPickups.Pickups;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                IVPickup pickup = arr[i];
+
+                if (pickup.Blip != -1)
+                    pickup.Blip = -1;
+            }
+
+            return result;
+        }
 
         #endregion
 
         #region Constructor
         public Main()
         {
-            Instance = this;
-
             // Lists
             pickupsWithCustomTempBlip = new List<int>(16);
 
             // IV-SDK .NET stuff
             Initialized += Main_Initialized;
             Uninitialize += Main_Uninitialize;
-#if DEBUG
             OnImGuiRendering += Main_OnImGuiRendering;
-#endif
+            ProcessPad += Main_ProcessPad;
             Tick += Main_Tick;
+            ProcessAutomobile += Main_ProcessAutomobile;
+        }
+
+        private void Main_ProcessAutomobile(UIntPtr vehPtr)
+        {
+            IVPool vehPool = IVPools.GetVehiclePool();
+            for (int i = 0; i < vehPool.Count; i++)
+            {
+                UIntPtr ptr = vehPool.Get(i);
+
+                if (ptr == UIntPtr.Zero)
+                    continue;
+
+                unsafe
+                {
+                    // 0x14E8 - float m_fWaterCannonOrientation;
+                    // 0x14EC - float m_fWaterCannonElevation;
+                    // 0x1510 - Vector3 m_vecWaterCannonDirection;
+
+                    //IVVehicle veh = IVVehicle.FromUIntPtr(ptr);
+
+                    //veh.GetBoneMatrix2(41);
+
+                    //if (veh.Driver != UIntPtr.Zero)
+                    //{
+                    //    *(float*)(ptr.ToUInt32() + 0x14E8) = 1f;
+                    //    *(float*)(ptr.ToUInt32() + 0x14EC) = 1f;
+                    //    *(uint*)(ptr.ToUInt32() + 0x14C4) |= 0x40;
+
+                    //    *(uint*)(veh.Driver.ToUInt32() + 0x24) = 1;
+                        
+                    //}
+                }
+            }
         }
         #endregion
 
         #region Methods
-        private void RemoveAllCustomTempBlips()
+        // Custom Pickup Blips
+        private void RemoveAllCustomPickupBlips()
         {
             if (pickupsWithCustomTempBlip.Count == 0)
                 return;
-
-            // Get all pickup slots
-            IVPickup[] pickups = IVPickups.Pickups;
 
             for (int i = 0; i < pickupsWithCustomTempBlip.Count; i++)
             {
                 i = RemoveCustomBlipFromList(i, pickups[pickupsWithCustomTempBlip[i]]);
             }
         }
-        private void CanTempBlipsStillExist(IVPickup[] pickups)
+        private void CanCustomPickupBlipsStillExists()
         {
             if (IS_PAUSE_MENU_ACTIVE())
                 return;
@@ -210,22 +188,6 @@ namespace UndergroundIntel
             for (int i = 0; i < pickupsWithCustomTempBlip.Count; i++)
             {
                 IVPickup pickup = pickups[pickupsWithCustomTempBlip[i]];
-
-                // Check if player is still within the range of the scan for pickups check
-                if (Vector3.Distance(playerCoords, pickup.Position) > ShowPickupsInRange)
-                {
-                    // Remove custom blip if not
-                    i = RemoveCustomBlipFromList(i, pickup);
-                    continue;
-                }
-
-                // Check if pickup has a valid type
-                if (pickup.Type == 0)
-                {
-                    // Remove custom blip if not
-                    i = RemoveCustomBlipFromList(i, pickup);
-                    continue;
-                }
 
                 // Check if pickup still has a blip
                 if (pickup.Blip == -1)
@@ -236,22 +198,29 @@ namespace UndergroundIntel
                 }
 
                 // Check if pickup still has a world object
-                if (pickup.WorldObject == UIntPtr.Zero && !forcePickupsToShow)
+                if (pickup.WorldObject == UIntPtr.Zero)
                 {
                     // Remove custom blip if pickup has no world object
                     i = RemoveCustomBlipFromList(i, pickup);
                     continue;
                 }
 
-                //// Check conditions
-                //i = CheckConditions(i, pickup);
-
+                // Check if pickups were actually unlocked for the current island they are on
                 if (!ModSettings.IntelAlwaysUnlocked)
-                    i = RemoveCustomBlipFromList(i, pickup);
+                {
+                    // Get current island pickup is on
+                    Utils.ZoneToIslandDict.TryGetValue(GET_NAME_OF_ZONE(pickup.Position), out Island currentIslandPickupIsOn);
+
+                    // Check if intel for pickups on the current island was unlocked
+                    if (!Utils.WasIntelBoughtForIsland(currentIslandPickupIsOn) && !ModSettings.IntelAlwaysUnlocked)
+                    {
+                        i = RemoveCustomBlipFromList(i, pickup);
+                        continue;
+                    }
+                }
             }
         }
-
-        private void SearchAndAddTemporaryPickupBlips(IVPickup[] pickups)
+        private void AddCustomPickupBlips()
         {
             for (int i = 0; i < pickups.Length; i++)
             {
@@ -259,7 +228,6 @@ namespace UndergroundIntel
 
                 if (pickup.Position == Vector3.Zero)
                     continue;
-
 
                 // Check if pickup type is allowed
                 switch (pickup.Type)
@@ -273,9 +241,6 @@ namespace UndergroundIntel
                     default:
                         continue;
                 }
-
-                //if (pickup.Type == 0 || (pickup.Type != 2 && pickup.Type != 15)) // NONE, Regular, Weapons. Maybe make it so it checks the pickup model instead of the type?
-                //    continue;
 
                 // Check if pickup already has a blip
                 if (pickup.Blip != -1)
@@ -301,31 +266,18 @@ namespace UndergroundIntel
                         continue;
                 }
 
-                // Check actual distance - If greater then the search distance then skip adding the temp blip to the pickup
-                if (Vector3.Distance(playerCoords, pickup.Position) > ShowPickupsInRange)
-                    continue;
+                // Check if pickups should always be unlocked
+                if (!ModSettings.IntelAlwaysUnlocked)
+                {
+                    // Get current island pickup is on
+                    Utils.ZoneToIslandDict.TryGetValue(GET_NAME_OF_ZONE(pickup.Position), out Island currentIslandPickupIsOn);
 
-                // Get current island pickup is on
-                zoneToIslandDict.TryGetValue(GET_NAME_OF_ZONE(pickup.Position), out Island currentIslandPickupIsOn);
+                    // Check if intel for pickups on the current island was unlocked
+                    if (!Utils.WasIntelBoughtForIsland(currentIslandPickupIsOn) && !ModSettings.IntelAlwaysUnlocked)
+                        continue;
+                }
 
-                // Check if intel for pickups on the current island was unlocked
-                if (!Utils.WasIntelBoughtForIsland(currentIslandPickupIsOn) && !ModSettings.IntelAlwaysUnlocked)
-                    continue;
-
-                // Check conditions
-                //if (!AlwaysShowPickups && !forcePickupsToShow)
-                //{
-                //    bool didWantedConditionMet = ModSettings.OnlyShowPickupsWhenWanted && wantedLevel != 0;
-
-                //    // Can add more conditions here to this check
-                //    bool didAnyConditionMet = didWantedConditionMet;
-
-                //    // If the pickups are not set to always show, and no condition met, then never shop pickups on the radar
-                //    if (!didAnyConditionMet)
-                //        continue;
-                //}
-
-                // Create temp blip
+                // Create and assign temp blip
                 pickup.Blip = IVPickups.CreateTemporaryRadarBlipForPickup(pickup.Position, i);
 
                 // Add to list of custom temp blips
@@ -333,105 +285,108 @@ namespace UndergroundIntel
             }
         }
 
-        private void GetRidOfCurrentBouncerBlip()
+        // Dealer
+        private void ResetCurrentDealer()
         {
-            if (currentBouncerBlip == null)
+            if (currentDealerSpot == null)
                 return;
 
-            currentBouncerBlip.Delete();
-            currentBouncerBlip = null;
+            currentDealerSpot.Reset();
+            currentDealerSpot = null;
         }
-        private void CreateCurrentBouncerBlip()
+        private void FindDealer()
         {
-            if (currentBouncerBlip != null)
+            // Prevent interaction if intel should always be unlocked, or if it was already unlock for the current island
+#if !DEBUG
+            if (ModSettings.IntelAlwaysUnlocked || Utils.WasIntelBoughtForIsland(currentIslandPlayerIsOn))
+#else
+            if (ModSettings.IntelAlwaysUnlocked)
+#endif
+            {
+                ResetCurrentDealer();
+                noMessageSound = false;
                 return;
+            }
+
+            // Try find the closest dealer spot from the current player position
+            DealerSpot foundDealerSpot = Core.FindClosestDealerSpotFromPosition(playerCoords);
+
+            if (foundDealerSpot == null)
+                return;
+
+            // Try to find dealer NPC at expected position if no one was found yet for this spot
+            foundDealerSpot.DealerHandle = FindDealerAtPosition(foundDealerSpot.Position);
+
+            if (!foundDealerSpot.HasDealerHandle())
+                return;
+
+            // Set current dealer
+            currentDealerSpot = foundDealerSpot;
+        }
+        private void HandleDealerInteraction()
+        {
+            if (!currentDealerSpot.HasDealerHandle())
+                return;
+
+            // Make blip appear so the player knows they can interact with the dealer
+            currentDealerSpot.CreateBlip();
+
+            // Check if player is within interaction distance
+            GET_CHAR_COORDINATES(currentDealerSpot.DealerHandle, out Vector3 dealerCoords);
+
+            // Visualize the range around the dealer which the player has to be in to be able to interact with the dealer
+            if (VisualizeDealerStuff)
+                DRAW_CHECKPOINT_WITH_ALPHA(dealerCoords, currentDealerSpot.InteractionDistance * 2f, Color.FromArgb(60, Color.Green));
+
+            if (Vector3.Distance(playerCoords, dealerCoords) > currentDealerSpot.InteractionDistance)
+            {
+                currentDealerSpot.InteractionState = DealerInteractionState.NotWithinInteractionDistance;
+                noMessageSound = false;
+                return;
+            }
+
+            // Check if dealer is facing the player for the interaction if required
+            if (currentDealerSpot.PlayerNeedsToBeInDealersVision)
+            {
+                if (!IS_CHAR_FACING_CHAR(currentDealerSpot.DealerHandle, playerPedHandle, currentDealerSpot.DealersFOV))
+                {
+                    currentDealerSpot.InteractionState = DealerInteractionState.NotWithinDealersVision;
+                    noMessageSound = false;
+                    return;
+                }
+            }
 
 #if !DEBUG
-            // If intel was already bought for current island then dont add blip to bouncer
-            if (Utils.WasIntelBoughtForIsland(currentIslandPlayerIsOn))
-                return;
-#endif
-
-            // Create blip
-            currentBouncerBlip = NativeBlip.AddBlip(currentBouncerHandle);
-            currentBouncerBlip.Color = eBlipColor.BLIP_COLOR_YELLOW;
-            currentBouncerBlip.Display = eBlipDisplay.BLIP_DISPLAY_ARROW_ONLY;
-        }
-        private void HandleBouncerInteraction()
-        {
-            if (BouncerPickupIntelCutscene.IsCutsceneActive)
-                return;
-
-            // Check the current interior
-            GET_KEY_FOR_CHAR_IN_ROOM(playerPedHandle, out uint currentRoomKey);
-
-            if (!allowedRooms.Contains(currentRoomKey))
-            {
-                GetRidOfCurrentBouncerBlip();
-                noMessageSound = false;
-                return;
-            }
-
-            // Find bouncer within current interior
-            currentBouncerHandle = FindBouncerWithinRoom();
-
-            if (currentBouncerHandle == 0)
-            {
-                GetRidOfCurrentBouncerBlip();
-                noMessageSound = false;
-                return;
-            }
-
-            // Check if intel was already bought for current island
-#if !DEBUG
-            if (Utils.WasIntelBoughtForIsland(currentIslandPlayerIsOn))
-            {
-                noMessageSound = false;
-                return;
-            }
-#endif
-
-            CreateCurrentBouncerBlip();
-
-            // Check distance to bouncer
-            GET_CHAR_COORDINATES(currentBouncerHandle, out Vector3 bouncerPedCoords);
-
-            if (Vector3.Distance(playerCoords, bouncerPedCoords) > 1f)
-            {
-                noMessageSound = false;
-                return;
-            }
-
-            // Check if bouncer is facing the player for the interaction
-            if (!IS_CHAR_FACING_CHAR(currentBouncerHandle, playerPedHandle, 25f))
-            {
-                noMessageSound = false;
-                return;
-            }
-
-            string message = null;
-
             // Check money
-#if !DEBUG
             STORE_SCORE(CONVERT_INT_TO_PLAYERINDEX(GET_PLAYER_ID()), out uint score);
             if (score < ModSettings.PickupIntelFee)
             {
+                currentDealerSpot.InteractionState = DealerInteractionState.NotEnoughMoney;
+
                 // Show message to player
-                message = "You currently dont have enough money to buy intel about available pickups.";
-                NativeGame.DisplayCustomHelpMessage(message, noMessageSound);
+                NativeGame.DisplayCustomHelpMessage("You currently dont have enough money to buy intel about available pickups.", noMessageSound);
                 noMessageSound = true;
+
                 return;
             }
 #endif
 
             // Show message to player
-            string amount = ModSettings.PickupIntelFee.ToString("$#,0", System.Globalization.CultureInfo.InvariantCulture);
-            message = string.Format("Press {0} to unlock intel about weapon and health pickups in {1} for {2}.", isUsingController ? "~INPUT_FRONTEND_ACCEPT~" : "~INPUT_PICKUP~", Utils.ToNiceLookingShortIslandName(currentIslandPlayerIsOn), amount);
-            NativeGame.DisplayCustomHelpMessage(message, noMessageSound);
-            noMessageSound = true;
+            if (Core.TryGetPrompt(currentDealerSpot.InteractionPromptKey, out string prompt))
+            {
+                currentDealerSpot.InteractionState = DealerInteractionState.Interactable;
 
-            // Bouncer should look at the player so the player knows they can interact with the bouncer
-            _TASK_LOOK_AT_CHAR(currentBouncerHandle, playerPedHandle, 1000, 0);
+                string amount = ModSettings.PickupIntelFee.ToString("$#,0", System.Globalization.CultureInfo.InvariantCulture);
+                NativeGame.DisplayCustomHelpMessage(string.Format(prompt, isUsingController ? "~INPUT_FRONTEND_ACCEPT~" : "~INPUT_PICKUP~", amount), noMessageSound);
+                noMessageSound = true;
+            }
+            else
+            {
+                currentDealerSpot.InteractionState = DealerInteractionState.InteractableButNoPromptWasSet;
+            }
+
+            // Dealer should look at the player for immersion
+            _TASK_LOOK_AT_CHAR(currentDealerSpot.DealerHandle, playerPedHandle, 1000, 0);
 
             // Check if accept key it pressed
             IVPad pad = IVPad.GetPad();
@@ -446,140 +401,141 @@ namespace UndergroundIntel
                 return;
 
             // Signal cutscene to start now
-            BouncerPickupIntelCutscene.Start();
+            DealerPickupIntelCutscene.Start();
         }
-        #endregion
-
-        #region Functions
-        private bool RemoveBlipFromPickup(IVPickup pickup)
+        private void CheckCurrentDealer()
         {
-            int blipHandle = pickup.Blip;
-
-            if (blipHandle == -1)
-                return false;
-
-            if (!DOES_BLIP_EXIST(blipHandle))
+            // Check if dealer even has a handle
+            if (!currentDealerSpot.HasDealerHandle())
             {
-                pickup.Blip = -1;
-                return true;
+                ResetCurrentDealer();
+                return;
             }
 
-            REMOVE_BLIP(blipHandle);
-            pickup.Blip = -1;
-            return true;
-        }
-        private int RemoveCustomBlipFromList(int atIndex, IVPickup pickup)
-        {
-            // Remove blip from pickup
-            RemoveBlipFromPickup(pickup);
-
-            // Remove blip from list
-            pickupsWithCustomTempBlip.RemoveAt(atIndex);
-            return atIndex - 1;
-        }
-
-        //private int CheckConditions(int i, IVPickup pickup)
-        //{
-        //    // Skip checking conditions if pickups are currently forced to shop up
-        //    if (forcePickupsToShow)
-        //        return i;
-
-        //    // Check conditions
-        //    bool didWantedConditionMet = ModSettings.OnlyShowPickupsWhenWanted && wantedLevel == 0;
-
-        //    // Can add more conditions here to this check
-        //    bool didAnyConditionMet = didWantedConditionMet;
-
-        //    // Remove blip as no condition met
-        //    if (!AlwaysShowPickups || didAnyConditionMet)
-        //        return RemoveCustomBlipFromList(i, pickup);
-
-        //    return i;
-        //}
-
-        private int FindBouncerWithinRoom()
-        {
-            IVPool pedPool = IVPools.GetPedPool();
-            for (int i = 0; i < pedPool.Count; i++)
+            // Check if dealer is still valid
+            if (!DOES_CHAR_EXIST(currentDealerSpot.DealerHandle))
             {
-                UIntPtr ptr = pedPool.Get(i);
-
-                if (ptr == UIntPtr.Zero)
-                    continue;
-                if (ptr == IVPlayerInfo.FindThePlayerPed())
-                    continue;
-
-                int pedHandle = (int)pedPool.GetIndex(ptr);
-
-                if (IS_CHAR_DEAD(pedHandle) || IS_PED_IN_COMBAT(pedHandle))
-                    continue;
-
-                GET_KEY_FOR_CHAR_IN_ROOM(pedHandle, out uint currentRoomKey);
-
-                if (!allowedRooms.Contains(currentRoomKey))
-                    continue;
-
-                if (!IS_CHAR_USING_SCENARIO(pedHandle, "SCENARIO_STANDING"))
-                    continue;
-
-                return pedHandle;
-
-                //GET_CHAR_MODEL(pedHandle, out uint model);
-
-                //if (model == RAGE.AtStringHash("M_Y_BOUNCER_01")
-                //    || model == RAGE.AtStringHash("M_Y_GTRI_LO_01"))
-                //    return pedHandle;
+                ResetCurrentDealer();
+                return;
             }
 
-            return 0;
-        }
-        #endregion
-
-        private void Main_Uninitialize(object sender, EventArgs e)
-        {
-            if (!CLR.CLRBridge.IsShuttingDown)
-                RemoveAllCustomTempBlips();
-
-            GetRidOfCurrentBouncerBlip();
-
-            if (pickupsWithCustomTempBlip != null)
+            // Check if dealer is dead
+            if (IS_CHAR_DEAD(currentDealerSpot.DealerHandle))
             {
-                pickupsWithCustomTempBlip.Clear();
-                pickupsWithCustomTempBlip = null;
+                ResetCurrentDealer();
+                return;
             }
-            if (allowedRooms != null)
+
+            // Check if dealer is in combat
+            if (IS_PED_IN_COMBAT(currentDealerSpot.DealerHandle))
             {
-                allowedRooms.Clear();
-                allowedRooms = null;
+                ResetCurrentDealer();
+                return;
             }
-        }
-        private void Main_Initialized(object sender, EventArgs e)
-        {
-            ModSettings.Load(Settings);
+
+            // Check if dealer left activation range
+            GET_CHAR_COORDINATES(currentDealerSpot.DealerHandle, out Vector3 dealerCoords);
+            if (Vector3.Distance(dealerCoords, currentDealerSpot.Position) > currentDealerSpot.ActivationDistance)
+            {
+                ResetCurrentDealer();
+                return;
+            }
+
+            // Check if player left activation range
+            if (Vector3.Distance(playerCoords, currentDealerSpot.Position) > currentDealerSpot.ActivationDistance)
+            {
+                ResetCurrentDealer();
+                return;
+            }
         }
 
+        // Hooking
+        private void CreateHooks()
+        {
+            uint address = 0;
+
+            switch (MemoryAccess.GameVersion)
+            {
+                case eGameVersion.VERSION_1070:
+
+                    address = MemoryAccess.BaseAddress + 0x534E30;
+
+                    break;
+                case eGameVersion.VERSION_1080:
+
+                    address = MemoryAccess.BaseAddress + 0x589CB0;
+
+                    break;
+
+                default:
+                    break;
+            }
+
+            hookedCPickupsReadSaveFunc = new CPickups_readSave_Delegate(HookedCPickupsReadSaveFunc);
+            Logging.LogDebug("CreateHook Result: {0}", ManagedMinHook.CreateHook(address, hookedCPickupsReadSaveFunc, out originalCPickupsReadSaveFunc));
+            Logging.LogDebug("EnableHook Result: {0}", ManagedMinHook.EnableHook(address));
+        }
+        private void DisableHooks()
+        {
+            uint address = 0;
+
+            switch (MemoryAccess.GameVersion)
+            {
+                case eGameVersion.VERSION_1070:
+
+                    address = MemoryAccess.BaseAddress + 0x534E30;
+
+                    break;
+                case eGameVersion.VERSION_1080:
+
+                    address = MemoryAccess.BaseAddress + 0x589CB0;
+
+                    break;
+
+                default:
+                    break;
+            }
+
+            Logging.LogDebug("DisableHook Result: {0}", ManagedMinHook.DisableHook(address));
+        }
+
+        // UI
 #if DEBUG
-        private void Main_OnImGuiRendering(IntPtr devicePtr, ImGuiIV_DrawingContext ctx)
+        private void ModDebugOverlay()
         {
-            if (ShowModDebug)
-            {
-                ImGuiIV.Begin("Underground Intel Debug", ref ShowModDebug, eImGuiWindowFlags.None, eImGuiWindowFlagsEx.NoMouseEnable);
-
-                ImGuiIV.TextUnformatted("CurrentIslandPlayerIsOn: {0}", currentIslandPlayerIsOn);
-                ImGuiIV.TextUnformatted("WasIntelBoughtForCurrentIsland: {0}", Utils.WasIntelBoughtForIsland(currentIslandPlayerIsOn));
-                ImGuiIV.TextUnformatted("Global Variables Value For Current Island: {0}", IVTheScripts.GetGlobalInteger(Utils.GetGlobalVariablesIndexForIslandBasedOnEpisode(currentIslandPlayerIsOn)));
-
-                ImGuiIV.End();
-            }
-
-            if (!ShowPickupDebug)
+            if (!ShowModDebugOverlay)
                 return;
 
-            IVPickup[] arr = IVPickups.Pickups;
+            ImGuiIV.Begin("Underground Intel Debug", ref ShowModDebugOverlay, eImGuiWindowFlags.None, eImGuiWindowFlagsEx.NoMouseEnable);
 
-            for (int i = 0; i < arr.Length; i++)
+            ImGuiIV.TextUnformatted("CurrentIslandPlayerIsOn: {0}", currentIslandPlayerIsOn);
+            ImGuiIV.TextUnformatted("WasIntelBoughtForCurrentIsland: {0}", Utils.WasIntelBoughtForIsland(currentIslandPlayerIsOn));
+            ImGuiIV.TextUnformatted("Global Variables Value For Current Island: {0}", IVTheScripts.GetGlobalInteger(Utils.GetGlobalVariablesIndexForIslandBasedOnEpisode(currentIslandPlayerIsOn)));
+
+            ImGuiIV.TextUnformatted("WasAnyKeyPressed: {0}", Core.WasAnyKeyPressed);
+
+            if (currentDealerSpot != null)
             {
-                IVPickup pickup = arr[i];
+                ImGuiIV.Spacing(3);
+                ImGuiIV.TextColored(Color.Green, "Found dealer spot");
+                ImGuiIV.TextUnformatted("DealerHandle: {0}", currentDealerSpot.DealerHandle);
+            }
+            else
+            {
+                ImGuiIV.Spacing(3);
+                ImGuiIV.TextColored(Color.Red, "No current dealer spot");
+            }
+
+            ImGuiIV.End();
+        }
+        private void PickupDebugOverlay()
+        {
+            if (!ShowPickupDebugOverlay)
+                return;
+
+            for (int i = 0; i < pickups.Length; i++)
+            {
+                IVPickup pickup = pickups[i];
 
                 if (pickup.Position == Vector3.Zero)
                     continue;
@@ -620,7 +576,7 @@ namespace UndergroundIntel
                     ImGuiIV.TextUnformatted("WorldObject: {0}", pickup.WorldObject);
                     ImGuiIV.TextUnformatted("field_8: {0}", pickup.field_8);
                     ImGuiIV.TextUnformatted("RoomKey: {0}", pickup.RoomKey);
-                    ImGuiIV.TextUnformatted("Blip: {0}", pickup.Blip);
+                    ImGuiIV.TextUnformatted("Blip: {0} ({1}, {2})", pickup.Blip, pickup.Blip >> 16, pickup.Blip & 0xFFFF);
                     ImGuiIV.TextUnformatted("LastPickedUpTime: {0}", pickup.LastPickedUpTime);
                     ImGuiIV.TextUnformatted("Position: {0}", pickup.Position);
                     ImGuiIV.TextUnformatted("ModelIndex: {0}", pickup.ModelIndex);
@@ -633,38 +589,356 @@ namespace UndergroundIntel
         }
 #endif
 
-        private void Main_Tick(object sender, EventArgs e)
+        private void EditorUI()
         {
-            if (allowedRooms == null)
+            if (!EditorOpened)
+                return;
+
+            ImGuiIV.Begin("Underground Intel", ref EditorOpened);
+
+            if (ImGuiIV.BeginTabBar("##UGITabBar"))
             {
-                allowedRooms = new List<uint>()
+                PromptsTab();
+                DealersTab();
+            }
+            ImGuiIV.EndTabBar();
+
+            ImGuiIV.End();
+        }
+        private void PromptsTab()
+        {
+            if (ImGuiIV.BeginTabItem("Prompts"))
+            {
+                ImGuiIV.TextUnformatted("Edit interaction or cutscene prompts.");
+
+                ImGuiIV.Spacing(2);
+                ImGuiIV.SeparatorText("Control");
+
+                if (ImGuiIV.Button("Save Prompts"))
                 {
-                    GET_HASH_KEY_2("GtaMloRoom01"),     // For Bohan and Alderney
-                    GET_HASH_KEY_2("Room_gunlobby"),    // For Bohan and Alderney
-                    GET_HASH_KEY_2("Room_GunChina")     // For Algonquin
-                };
+                    Core.SavePrompts();
+                }
+                ImGuiIV.SameLine();
+                if (ImGuiIV.Button("Load Prompts"))
+                {
+                    Core.LoadPrompts();
+                }
+
+                ImGuiIV.Spacing(2);
+                ImGuiIV.SeparatorText("Prompts");
+
+                ImGuiIV.Spacing(2);
+                ImGuiIV.TextUnformatted("Add a new prompt");
+                ImGuiIV.InputText("Key", ref promptKey);
+                ImGuiIV.InputText("Value", ref promptValue);
+                if (ImGuiIV.Button("Add prompt"))
+                {
+                    if (!string.IsNullOrWhiteSpace(promptKey))
+                    {
+                        if (Core.TryGetPrompt(promptKey, out string p))
+                        {
+                            ShowSubtitleMessage("This key already exists in the prompts list!", 5000);
+                        }
+                        else
+                        {
+                            Core.Prompts.Add(new Prompt(promptKey, promptValue));
+                            ShowSubtitleMessage("Key added!");
+                        }
+                    }
+                    else
+                    {
+                        ShowSubtitleMessage("Key cannot be empty!", 5000);
+                    }
+                }
+
+                ImGuiIV.Spacing(4);
+                ImGuiIV.TextDisabled("There are currently {0} prompts.", Core.Prompts.Count);
+
+                for (int i = 0; i < Core.Prompts.Count; i++)
+                {
+                    Prompt prompt = Core.Prompts[i];
+
+                    if (ImGuiIV.CollapsingHeader(string.Format("{0}##UGIPrompts{1}", prompt.Key, i)))
+                    {
+                        if (ImGuiIV.Button("Delete this prompt"))
+                        {
+                            Core.Prompts.RemoveAt(i);
+                            i--;
+                            continue;
+                        }
+                        if (ImGuiIV.Button("Apply changes"))
+                        {
+                            prompt.Key = prompt.KeyEdit;
+                            prompt.Value = prompt.ValueEdit.Replace("\n", " ");
+                        }
+
+                        ImGuiIV.Spacing(3);
+
+                        ImGuiIV.InputText(string.Format("Key##UGIPromptKey{0}", i), ref prompt.KeyEdit);
+                        ImGuiIV.InputTextMultiline(string.Format("Value##UGIPromptValue{0}", i), ref prompt.ValueEdit);
+                    }
+                }
+
+                ImGuiIV.EndTabItem();
+            }
+        }
+        private void DealersTab()
+        {
+            if (ImGuiIV.BeginTabItem("Dealers"))
+            {
+                ImGuiIV.TextUnformatted("Edit or add new dealers.");
+
+                ImGuiIV.Spacing(2);
+                ImGuiIV.SeparatorText("Control");
+
+                if (ImGuiIV.Button("Save Dealers"))
+                {
+                    Core.SaveDealers();
+                }
+                ImGuiIV.SameLine();
+                if (ImGuiIV.Button("Load Dealers"))
+                {
+                    Core.LoadDealers();
+                }
+
+                ImGuiIV.Spacing(2);
+                ImGuiIV.SeparatorText("Dealers");
+
+                ImGuiIV.Spacing(2);
+                ImGuiIV.TextUnformatted("Add a new dealer");
+                if (ImGuiIV.Button("Add dealer"))
+                {
+                    Core.Dealers.Add(new DealerSpot(GENERATE_RANDOM_INT()));
+                }
+
+                ImGuiIV.Spacing(4);
+                ImGuiIV.TextDisabled("There are currently {0} dealers.", Core.Dealers.Count);
+
+                for (int i = 0; i < Core.Dealers.Count; i++)
+                {
+                    DealerSpot dealer = Core.Dealers[i];
+
+                    if (ImGuiIV.CollapsingHeader(string.Format("{0}##UGIDealer{1}", dealer.UniqueName, i)))
+                    {
+                        if (ImGuiIV.Button("Delete this dealer"))
+                        {
+                            Core.Dealers.RemoveAt(i);
+                            i--;
+                            continue;
+                        }
+                        if (ImGuiIV.Button("Apply changes"))
+                        {
+                            dealer.UniqueName = dealer.UniqueNameEdit;
+                            dealer.InteractionPromptKey = dealer.InteractionPromptKeyEdit;
+                            dealer.CutscenePromptKey = dealer.CutscenePromptKeyEdit;
+                        }
+
+                        ImGuiIV.Spacing(3);
+
+                        ImGuiIV.HelpMarker("Defines a unique name for the dealer to make them easier to identify in the in-game editor.");
+                        ImGuiIV.SameLine();
+                        ImGuiIV.InputText(string.Format("UniqueName##UGIDealer{0}", i), ref dealer.UniqueNameEdit);
+
+                        ImGuiIV.HelpMarker("Defines the expected world position of the dealer. Used to locate the NPC at that position for enabling interaction.");
+                        ImGuiIV.SameLine();
+                        if (ImGuiIV.Button("Set to player pos"))
+                        {
+                            dealer.Position = playerCoords;
+                        }
+                        ImGuiIV.SameLine();
+                        ImGuiIV.DragFloat3(string.Format("Position##UGIDealer{0}", i), ref dealer.Position, 0.1f);
+
+                        ImGuiIV.HelpMarker("Defines whether the player must be within the dealer's vision to enable interaction.");
+                        ImGuiIV.SameLine();
+                        ImGuiIV.CheckBox(string.Format("PlayerNeedsToBeInDealersVision##UGIDealer{0}", i), ref dealer.PlayerNeedsToBeInDealersVision);
+
+                        ImGuiIV.HelpMarker("Defines the dealers field of view. Only used if \"PlayerNeedsToBeInDealersVision\" is set to true.");
+                        ImGuiIV.SameLine();
+                        ImGuiIV.SliderFloat(string.Format("DealersFOV##UGIDealer{0}", i), ref dealer.DealersFOV, 0f, 180f);
+
+                        ImGuiIV.HelpMarker("Defines how close the player must be to the dealer for the interaction logic to activate.");
+                        ImGuiIV.SameLine();
+                        ImGuiIV.DragFloat(string.Format("ActivationDistance##UGIDealer{0}", i), ref dealer.ActivationDistance);
+
+                        ImGuiIV.HelpMarker("Defines how close the player must be to the dealer to enable interaction.");
+                        ImGuiIV.SameLine();
+                        ImGuiIV.DragFloat(string.Format("InteractionDistance##UGIDealer{0}", i), ref dealer.InteractionDistance);
+
+                        ImGuiIV.HelpMarker("Defines the prompt text displayed when the player is within interaction range of the dealer.\n" +
+                            "Prompts are located in the 'prompts.json' file. Recommended to be set for improving user experience.");
+                        ImGuiIV.SameLine();
+                        ImGuiIV.InputText(string.Format("InteractionPrompt##UGIDealer{0}", i), ref dealer.InteractionPromptKeyEdit);
+
+                        ImGuiIV.HelpMarker("Defines the prompt text shown after the player interacts with the dealer and enters the cutscene.\n" +
+                            "Prompts are located in the 'prompts.json' file.");
+                        ImGuiIV.SameLine();
+                        ImGuiIV.InputText(string.Format("CutscenePrompt##UGIDealer{0}", i), ref dealer.CutscenePromptKeyEdit);
+                    }
+                }
+
+                ImGuiIV.EndTabItem();
+            }
+        }
+        #endregion
+
+        #region Functions
+        private bool RemoveBlipFromPickup(IVPickup pickup)
+        {
+            int blipHandle = pickup.Blip;
+
+            if (blipHandle == -1)
+                return false;
+
+            if (!DOES_BLIP_EXIST(blipHandle))
+            {
+                pickup.Blip = -1;
+                return true;
             }
 
-            // Get stuff
+            REMOVE_BLIP(blipHandle);
+            pickup.Blip = -1;
+            return true;
+        }
+        private int RemoveCustomBlipFromList(int atIndex, IVPickup pickup)
+        {
+            // Remove blip from pickup
+            RemoveBlipFromPickup(pickup);
+
+            // Remove blip from list
+            pickupsWithCustomTempBlip.RemoveAt(atIndex);
+            return atIndex - 1;
+        }
+
+        private int FindDealerAtPosition(Vector3 pos)
+        {
+            IVPool pedPool = IVPools.GetPedPool();
+            for (int i = 0; i < pedPool.Count; i++)
+            {
+                UIntPtr ptr = pedPool.Get(i);
+
+                if (ptr == UIntPtr.Zero)
+                    continue;
+                if (ptr == IVPlayerInfo.FindThePlayerPed())
+                    continue;
+
+                int pedHandle = (int)pedPool.GetIndex(ptr);
+
+                if (!DOES_CHAR_EXIST(pedHandle))
+                    continue;
+
+                if (IS_CHAR_DEAD(pedHandle) || IS_PED_IN_COMBAT(pedHandle))
+                    continue;
+
+                GET_CHAR_COORDINATES(pedHandle, out Vector3 pedCoords);
+
+                if (Vector3.Distance(pedCoords, pos) > 2f)
+                    continue;
+
+                return pedHandle;
+            }
+
+            return 0;
+        }
+        #endregion
+
+        private void Main_Uninitialize(object sender, EventArgs e)
+        {
+            DisableHooks();
+
+            if (!CLR.CLRBridge.IsShuttingDown)
+                RemoveAllCustomPickupBlips();
+
+            ResetCurrentDealer();
+
+            if (pickupsWithCustomTempBlip != null)
+            {
+                pickupsWithCustomTempBlip.Clear();
+                pickupsWithCustomTempBlip = null;
+            }
+
+            Core.Shutdown();
+        }
+        private void Main_Initialized(object sender, EventArgs e)
+        {
+            CreateHooks();
+            ModSettings.Load(Settings);
+            Core.Init(ScriptResourceFolder);
+        }
+
+        private void Main_OnImGuiRendering(IntPtr devicePtr, ImGuiIV_DrawingContext ctx)
+        {
+#if DEBUG
+            ModDebugOverlay();
+            PickupDebugOverlay();
+#endif
+
+            EditorUI();
+        }
+
+        private void Main_ProcessPad(UIntPtr padPtr)
+        {
+            IVPad pad = IVPad.FromUIntPtr(padPtr);
+
+            if (pad != null)
+            {
+                Core.WasAnyKeyPressed = pad.Values.Any(x => x.CurrentValue == 255);
+            }
+        }
+
+        private void Main_Tick(object sender, EventArgs e)
+        {
+            // Get player stuff
             playerPedHandle = NativeGame.GetPlayerPedHandle();
             GET_CHAR_COORDINATES(playerPedHandle, out playerCoords);
             isUsingController = IS_USING_CONTROLLER();
 
             // Get current island player is on
-            zoneToIslandDict.TryGetValue(GET_NAME_OF_ZONE(playerCoords), out currentIslandPlayerIsOn);
+            Utils.ZoneToIslandDict.TryGetValue(GET_NAME_OF_ZONE(playerCoords), out currentIslandPlayerIsOn);
 
-            // Loop through all pickup slots
-            IVPickup[] pickups = IVPickups.Pickups;
+            // Get all pickups and store them
+            pickups = IVPickups.Pickups;
 
-            // Goes through the list of all custom temporary blips for pickups and checks if they can still exist
-            CanTempBlipsStillExist(pickups);
+            // Goes through the list of all custom pickup blips and checks if they can still exist
+#if DEBUG
+            if (!DisableTempBlipRemovalChecks)
+            {
+#endif
+                CanCustomPickupBlipsStillExists();
+#if DEBUG
+            }
+#endif
 
-            // Add temporary pickup blips
-            SearchAndAddTemporaryPickupBlips(pickups);
+            // Add custom pickup blips
+#if DEBUG
+            if (!DisableAddingTempBlipsCode)
+            {
+#endif
+                AddCustomPickupBlips();
+#if DEBUG
+            }
+#endif
 
-            // Handle bouncer stuff
-            HandleBouncerInteraction();
-            BouncerPickupIntelCutscene.HandleBouncerCutscene(playerPedHandle, currentBouncerHandle, currentIslandPlayerIsOn);
+            // Handle dealer interaction
+            if (currentDealerSpot == null)
+            {
+                FindDealer();
+            }
+            else
+            {
+                // If the reveil cutscene is currently active we want to prevent interaction
+                if (!DealerPickupIntelCutscene.IsCutsceneActive)
+                    HandleDealerInteraction();
+                
+                // Handle dealer cutscene
+                if (currentDealerSpot.HasDealerHandle())
+                    DealerPickupIntelCutscene.Process(playerPedHandle, currentDealerSpot, currentIslandPlayerIsOn);
+
+                CheckCurrentDealer();
+            }
+
+            // Visualize all dealer positions, ranges and states
+            if (VisualizeDealerStuff)
+                Core.VisualizeDealerStuff(playerCoords);
         }
 
     }

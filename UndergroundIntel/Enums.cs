@@ -12,7 +12,7 @@
         LibertyCity = 57516
     }
 
-    internal enum BouncerCutsceneState
+    internal enum DealerCutsceneState
     {
         Ended,
         Beginning,
@@ -22,6 +22,15 @@
         LoadingScene,
         ProcessPickupReveil,
         Ending,
+    }
+
+    internal enum DealerInteractionState
+    {
+        Interactable,
+        InteractableButNoPromptWasSet,
+        NotWithinInteractionDistance,
+        NotWithinDealersVision,
+        NotEnoughMoney
     }
 
 }
