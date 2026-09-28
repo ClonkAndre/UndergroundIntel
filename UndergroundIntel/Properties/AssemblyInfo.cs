@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Internet Rob / ItsClonkAndre")]
 [assembly: AssemblyProduct("Underground Intel")]
-[assembly: AssemblyCopyright("Copyright © Internet Rob / ItsClonkAndre 2025")]
+[assembly: AssemblyCopyright("Copyright © Internet Rob / ItsClonkAndre 2025-2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -29,5 +29,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]

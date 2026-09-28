@@ -23,7 +23,7 @@ namespace UndergroundIntel.Classes
             IntelAlwaysUnlocked = settings.GetBoolean("Pickups", "AlwaysUnlocked", false);
 
             // Fees
-            PickupIntelFee = settings.GetInteger("Fees", "PickupIntelFee", 100_000);
+            PickupIntelFee = settings.GetInteger("Fees", "PickupIntelFee", 15_000);
         }
 
     }

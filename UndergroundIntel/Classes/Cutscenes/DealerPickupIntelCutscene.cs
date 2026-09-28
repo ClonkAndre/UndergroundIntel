@@ -3,20 +3,23 @@ using System.Numerics;
 
 using CCL.GTAIV;
 
+using UndergroundIntel.Classes.Json;
+
 using IVSDKDotNet;
 using IVSDKDotNet.Enums;
 using static IVSDKDotNet.Native.Natives;
 
 namespace UndergroundIntel.Classes.Cutscenes
 {
-    internal static class BouncerPickupIntelCutscene
+    internal static class DealerPickupIntelCutscene
     {
 
         #region Variables
         public static bool IsCutsceneActive;
         private static bool wasCutsceneMessageShown;
+        private static bool shouldCutsceneEnd;
         private static bool wasMoneyRemoved;
-        private static BouncerCutsceneState bouncerCutsceneState;
+        private static DealerCutsceneState bouncerCutsceneState;
         private static NativeCamera cutsceneCam;
         private static Vector3 cutsceneTargetLerpPos;
         private static IVPickup closestPickup;
@@ -35,27 +38,28 @@ namespace UndergroundIntel.Classes.Cutscenes
             moneyPropModel = (int)RAGE.AtStringHash("cj_cash_pile_1");
             storedHudState = IVMenuManager.HudOn;
             storedRadarState = IVMenuManager.RadarMode;
-            bouncerCutsceneState = BouncerCutsceneState.Beginning;
+            bouncerCutsceneState = DealerCutsceneState.Beginning;
         }
-        public static void HandleBouncerCutscene(int playerPedHandle, int currentBouncerHandle, Island currentIslandPlayerIsOn)
+        public static void Process(int playerPedHandle, DealerSpot currentDealerSpot, Island currentIslandPlayerIsOn)
         {
             if (!IsCutsceneActive)
                 return;
 
             switch (bouncerCutsceneState)
             {
-                case BouncerCutsceneState.Beginning:
+                case DealerCutsceneState.Beginning:
                     {
                         CLEAR_HELP();
                         SET_PLAYER_CONTROL((int)GET_PLAYER_ID(), false);
                         CLEAR_CHAR_TASKS(playerPedHandle);
+                        DISABLE_PAUSE_MENU(true);
 
                         // Change state
-                        bouncerCutsceneState = BouncerCutsceneState.WaitForAssetsToBeLoaded;
+                        bouncerCutsceneState = DealerCutsceneState.WaitForAssetsToBeLoaded;
                     }
                     break;
 
-                case BouncerCutsceneState.WaitForAssetsToBeLoaded:
+                case DealerCutsceneState.WaitForAssetsToBeLoaded:
                     {
                         // Load model
                         if (!HAS_MODEL_LOADED(moneyPropModel))
@@ -72,19 +76,19 @@ namespace UndergroundIntel.Classes.Cutscenes
                         }
 
                         // Change state
-                        bouncerCutsceneState = BouncerCutsceneState.GiveMoney;
+                        bouncerCutsceneState = DealerCutsceneState.GiveMoney;
                     }
                     break;
 
-                case BouncerCutsceneState.GiveMoney:
+                case DealerCutsceneState.GiveMoney:
                     {
-                        if (!IS_CHAR_PLAYING_ANIM(currentBouncerHandle, "missbrian_2", "take_obj"))
+                        if (!IS_CHAR_PLAYING_ANIM(currentDealerSpot.DealerHandle, "missbrian_2", "take_obj"))
                         {
-                            Utils.PlayAnimation(currentBouncerHandle, "missbrian_2", "take_obj", 1f, 0, AnimationFlags.None);
+                            Utils.PlayAnimation(currentDealerSpot.DealerHandle, "missbrian_2", "take_obj", 1f, 0, AnimationFlags.None);
                         }
                         else
                         {
-                            GET_CHAR_ANIM_CURRENT_TIME(currentBouncerHandle, "missbrian_2", "take_obj", out float bouncerAnimValue);
+                            GET_CHAR_ANIM_CURRENT_TIME(currentDealerSpot.DealerHandle, "missbrian_2", "take_obj", out float bouncerAnimValue);
 
                             if (bouncerAnimValue > 0.5f) // At this point the gun store owner reaches out his hand to the player
                             {
@@ -116,7 +120,7 @@ namespace UndergroundIntel.Classes.Cutscenes
                                         }
 
                                         // Change state
-                                        bouncerCutsceneState = BouncerCutsceneState.PrepareForPickupReveil;
+                                        bouncerCutsceneState = DealerCutsceneState.PrepareForPickupReveil;
                                     }
                                     else if (playerAnimValue.InRange(0.4f, 0.45f)) // Players hands over money
                                     {
@@ -133,7 +137,7 @@ namespace UndergroundIntel.Classes.Cutscenes
                                         Utils.SetIntelAsBoughtForIsland(currentIslandPlayerIsOn);
 
                                         DETACH_OBJECT(moneyObject, true);
-                                        ATTACH_OBJECT_TO_PED(moneyObject, currentBouncerHandle, (uint)eBone.BONE_RIGHT_HAND, objectOffset, Vector3.Zero, 0);
+                                        ATTACH_OBJECT_TO_PED(moneyObject, currentDealerSpot.DealerHandle, (uint)eBone.BONE_RIGHT_HAND, objectOffset, Vector3.Zero, 0);
                                     }
                                 }
                             }
@@ -141,7 +145,7 @@ namespace UndergroundIntel.Classes.Cutscenes
                     }
                     break;
 
-                case BouncerCutsceneState.PrepareForPickupReveil:
+                case DealerCutsceneState.PrepareForPickupReveil:
                     {
                         // Fade screen out
                         if (!Utils.DoAndCheckFadeScreenOut(2000))
@@ -149,6 +153,10 @@ namespace UndergroundIntel.Classes.Cutscenes
 
                         // Get closest pickup
                         GET_CHAR_COORDINATES(playerPedHandle, out Vector3 playerCoords);
+
+                        // This should never return false as there should ALWAYS be a pickup but incase there is not we assert
+                        //System.Diagnostics.Debug.Assert(Utils.TryFindRandomPickupAroundPositionOnIsland(playerCoords, 380f, currentIslandPlayerIsOn, out IVPickup? foundPickup));
+
                         closestPickup = Utils.FindClosestPickup(playerCoords);
 
                         // Create cutscene cam
@@ -159,15 +167,15 @@ namespace UndergroundIntel.Classes.Cutscenes
 
                         cutsceneTargetLerpPos = cutsceneCam.Position - new Vector3(0f, 0f, 3f);
 
-                        // Screen is faded out here, load area
-                        LOAD_SCENE(closestPickup.Position);
+                        // Load Scene
+                        NativeWorld.LoadEnvironmentNow(closestPickup.Position, true);
 
                         // Change state
-                        bouncerCutsceneState = BouncerCutsceneState.LoadingScene;
+                        bouncerCutsceneState = DealerCutsceneState.LoadingScene;
                     }
                     break;
 
-                case BouncerCutsceneState.LoadingScene:
+                case DealerCutsceneState.LoadingScene:
                     {
                         IVMenuManager.HudOn = false;
                         IVMenuManager.RadarMode = 0;
@@ -183,11 +191,11 @@ namespace UndergroundIntel.Classes.Cutscenes
                         cutsceneEndTime = DateTime.UtcNow.AddSeconds(10d);
 
                         // Change state
-                        bouncerCutsceneState = BouncerCutsceneState.ProcessPickupReveil;
+                        bouncerCutsceneState = DealerCutsceneState.ProcessPickupReveil;
                     }
                     break;
 
-                case BouncerCutsceneState.ProcessPickupReveil:
+                case DealerCutsceneState.ProcessPickupReveil:
                     {
                         IVMenuManager.HudOn = false;
                         IVMenuManager.RadarMode = 0;
@@ -197,12 +205,18 @@ namespace UndergroundIntel.Classes.Cutscenes
 
                         if (!wasCutsceneMessageShown)
                         {
-                            NativeGame.DisplayCustomHelpMessage(string.Format("Intel about available pickups unlocked for {0}!", Utils.ToNiceLookingFullIslandName(currentIslandPlayerIsOn)));
+                            if (Core.TryGetPrompt(currentDealerSpot.CutscenePromptKey, out string prompt))
+                                NativeGame.DisplayCustomHelpMessage(prompt);
+                            
                             wasCutsceneMessageShown = true;
                         }
-
+                        
                         // Check if cutscene should end
-                        if (DateTime.UtcNow > cutsceneEndTime)
+                        if (DateTime.UtcNow > cutsceneEndTime || Core.WasAnyKeyPressed)
+                            shouldCutsceneEnd = true;
+
+                        // Handle cutscene end
+                        if (shouldCutsceneEnd)
                         {
                             // Fade screen out
                             if (!Utils.DoAndCheckFadeScreenOut(2000))
@@ -217,12 +231,12 @@ namespace UndergroundIntel.Classes.Cutscenes
                             }
 
                             // Change state
-                            bouncerCutsceneState = BouncerCutsceneState.Ending;
+                            bouncerCutsceneState = DealerCutsceneState.Ending;
                         }
                     }
                     break;
 
-                case BouncerCutsceneState.Ending:
+                case DealerCutsceneState.Ending:
                     {
                         IVMenuManager.HudOn = storedHudState;
                         IVMenuManager.RadarMode = storedRadarState;
@@ -232,12 +246,25 @@ namespace UndergroundIntel.Classes.Cutscenes
                             return;
 
                         SET_PLAYER_CONTROL((int)GET_PLAYER_ID(), true);
-                        SAY_AMBIENT_SPEECH(currentBouncerHandle, "THANKS", true, false, 0);
+                        SAY_AMBIENT_SPEECH(currentDealerSpot.DealerHandle, "THANKS", true, false, 0);
+                        DISABLE_PAUSE_MENU(false);
 
-                        TRIGGER_MISSION_COMPLETE_AUDIO((int)eMissionCompleteAudio.SMC_35);
+                        switch (NativeGame.CurrentEpisode)
+                        {
+                            case Episode.IV:
+                                TRIGGER_MISSION_COMPLETE_AUDIO((int)eMissionCompleteAudio.SMC_35);
+                                break;
+                            case Episode.TLaD:
+                                TRIGGER_MISSION_COMPLETE_AUDIO(81);
+                                break;
+                            case Episode.TBoGT:
+                                TRIGGER_MISSION_COMPLETE_AUDIO(82);
+                                break;
+                        }
 
-                        wasCutsceneMessageShown = false;
                         wasMoneyRemoved = false;
+                        wasCutsceneMessageShown = false;
+                        shouldCutsceneEnd = false;
                         IsCutsceneActive = false;
                     }
                     break;
